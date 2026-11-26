@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-br">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -16,7 +16,9 @@
                 AREA = LINHAS * COLUNAS,
                 LADO = 30,
                 PERCENTUAL = 0.05,
-                grade = []
+                grade = [],
+                pilha = []
+            let celula = 0
 
             for (let quantidade = 0; quantidade < AREA; quantidade++) {
                 grade.push({
@@ -25,8 +27,6 @@
                 })
             }
 
-            const pilha = []
-            let celula = 0
             grade[celula].visitada = true
             for (let quantidade = 1; quantidade < AREA; ) {
                 const vizinhos = []
@@ -47,6 +47,7 @@
                     const vizinho = vizinhos[Math.floor(Math.random() * vizinhos.length)],
                         diferenca = vizinho - celula,
                         direcao = 1 + (diferenca - (diferenca % COLUNAS)) / COLUNAS + (diferenca % COLUNAS) ** 2 - (diferenca % COLUNAS)
+
                     grade[celula].paredes[direcao] = false
                     grade[vizinho].paredes[(direcao + 2) % 4] = false
                     celula = vizinho
@@ -62,6 +63,7 @@
                     direcao = Math.floor(Math.random() * 4),
                     x = (cell % COLUNAS) + (direcao % 2) * (2 - direcao),
                     y = Math.floor(cell / COLUNAS) + ((direcao + 1) % 2) * (direcao - 1)
+
                 if (x >= 0 && x < COLUNAS && y >= 0 && y < LINHAS) {
                     const parede = Math.floor(Math.random() * 2)
                     grade[cell].paredes[direcao] = parede
@@ -95,5 +97,6 @@
                 }
             }
         </script>
+        <script src="javascript/path.js"></script>
     </body>
 </html>
