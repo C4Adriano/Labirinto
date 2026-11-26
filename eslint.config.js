@@ -38,7 +38,7 @@ const disabledRules = Object.fromEntries(
         "max-lines-per-function": ["warn", { max: 300 }],
         "max-params": ["warn", { max: 5 }],
         "max-statements": ["warn", { max: 50 }],
-        "no-console": ["warn", { allow: ["warn", "error", "info"] }],
+        "no-console": ["warn", { allow: ["warn", "error", "info", "log"] }],
         "no-unused-expressions": ["warn", { allowTernary: true }],
         "no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
         "no-use-before-define": ["warn", { functions: false }],
