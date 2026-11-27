@@ -1,86 +1,86 @@
-export const canvas = document.getElementById("canvas")
+/** @typedef {{ visited: boolean, walls: boolean[], id: number }} Cell */
 
-if (!(canvas instanceof HTMLCanvasElement)) {
-    throw new Error("Canvas não encontrado")
+export const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById("canvas")),
+    ctx = /** @type {CanvasRenderingContext2D} */ (canvas.getContext("2d")),
+    ROWS = 20,
+    COLUMNS = 20,
+    SIZE = 20,
+    EXTRA_PERCENT = 0.05,
+    TOTAL = ROWS * COLUMNS,
+    /** @type {number[][]} */ OFFSETS = [
+        [0, -1],
+        [1, 0],
+        [0, 1],
+        [-1, 0],
+    ],
+    /** @type {Cell[]} */ grid = []
+for (let id = 0; id < TOTAL; id++) grid.push({ visited: false, walls: [true, true, true, true], id })
+
+/**
+ * @param {number} cell
+ * @param {number} direction
+ * @returns {number}
+ */
+function neighborOf(cell, direction) {
+    const x = (cell % COLUMNS) + OFFSETS[direction][0],
+        y = Math.floor(cell / COLUMNS) + OFFSETS[direction][1]
+
+    if (x < 0 || x >= COLUMNS || y < 0 || y >= ROWS) return -1
+
+    return y * COLUMNS + x
 }
 
-export const ctx = canvas.getContext("2d")
+const /** @type {number[]} */ stack = []
 
-if (!ctx) {
-    throw new Error("Contexto 2D não disponível")
-}
+let current = 0,
+    visitedCount = 1
 
-export const LINHAS = 20, // x
-    COLUNAS = 20, // y
-    AREA = LINHAS * COLUNAS, // x × y
-    LADO = 30, // ?
-    PERCENTUAL = 0.05, // variação das células já criadas
-    /** @type {{visitada: boolean, paredes: (boolean | number)[]}[]} */ grade = [] // células
+grid[current].visited = true
 
-const /** @type {number[]} */ pilha = [] // backtracking
+while (visitedCount < TOTAL) {
+    /** @type {number[]} */
+    const options = []
 
-let celula = 0 // célula atual
-
-for (let quantidade = 0; quantidade < AREA; quantidade++) {
-    // criar células
-    grade.push({
-        visitada: false, // backtracking
-        paredes: [true, true, true, true], // Norte, Leste, Sul, Oeste
-    })
-}
-
-grade[celula].visitada = true // 0 começa visitada
-for (let quantidade = 1; quantidade < AREA; quantidade++) {
-    const /** @type {number[]} */ vizinhos = []
-
-    for (let direcao = 0; direcao < 4; direcao++) {
-        const x = (celula % COLUNAS) + (direcao % 2) * (2 - direcao),
-            y = Math.floor(celula / COLUNAS) + ((direcao + 1) % 2) * (direcao - 1)
-        if (x >= 0 && x < COLUNAS && y >= 0 && y < LINHAS) {
-            const vizinho = y * COLUNAS + x
-            if (!grade[vizinho].visitada) {
-                vizinhos.push(vizinho)
-            }
-        }
+    for (let direction = 0; direction < 4; direction++) {
+        const neighbor = neighborOf(current, direction)
+        if (neighbor !== -1 && !grid[neighbor].visited) options.push(direction)
     }
 
-    if (vizinhos.length > 0) {
-        pilha.push(celula)
-        const vizinho = vizinhos[Math.floor(Math.random() * vizinhos.length)],
-            diferenca = vizinho - celula,
-            direcao = 1 + (diferenca - (diferenca % COLUNAS)) / COLUNAS + (diferenca % COLUNAS) ** 2 - (diferenca % COLUNAS)
+    if (options.length > 0) {
+        stack.push(current)
 
-        grade[celula].paredes[direcao] = false
-        grade[vizinho].paredes[(direcao + 2) % 4] = false
-        celula = vizinho
-        grade[celula].visitada = true
-        quantidade++
-    } else if (pilha.length > 0) {
-        celula = pilha.pop() ?? 0
-    }
+        const direction = options[Math.floor(Math.random() * options.length)],
+            neighbor = neighborOf(current, direction)
+
+        grid[current].walls[direction] = false
+        grid[neighbor].walls[(direction + 2) % 4] = false
+
+        current = neighbor
+
+        grid[current].visited = true
+        visitedCount++
+    } else current = /** @type {number} */ (stack.pop())
 }
 
-for (let quantidade = PERCENTUAL * AREA; quantidade > 0; quantidade--) {
-    const _celula = Math.floor(Math.random() * AREA),
-        direcao = Math.floor(Math.random() * 4),
-        x = (_celula % COLUNAS) + (direcao % 2) * (2 - direcao),
-        y = Math.floor(_celula / COLUNAS) + ((direcao + 1) % 2) * (direcao - 1)
+for (let left = Math.round(EXTRA_PERCENT * TOTAL); left > 0; left--) {
+    const cell = Math.floor(Math.random() * TOTAL),
+        direction = Math.floor(Math.random() * 4),
+        neighbor = neighborOf(cell, direction)
 
-    if (x >= 0 && x < COLUNAS && y >= 0 && y < LINHAS) {
-        const parede = Math.floor(Math.random() * 2)
-        grade[_celula].paredes[direcao] = parede
-        grade[y * COLUNAS + x].paredes[(direcao + 2) % 4] = parede
+    if (neighbor !== -1) {
+        grid[cell].walls[direction] = false
+        grid[neighbor].walls[(direction + 2) % 4] = false
     }
 }
 
 /**
  * @param {number} x1
- * @param {number} x2
  * @param {number} y1
+ * @param {number} x2
  * @param {number} y2
+ * @returns {void}
  */
-function desenharLinha(x1, y1, x2, y2) {
-    if (!ctx) return
+function drawLine(x1, y1, x2, y2) {
     ctx.beginPath()
     ctx.moveTo(x1 + 1, y1 + 1)
     ctx.lineTo(x2 + 1, y2 + 1)
@@ -89,20 +89,14 @@ function desenharLinha(x1, y1, x2, y2) {
 
 ctx.clearRect(0, 0, canvas.width, canvas.height)
 ctx.strokeStyle = "black"
-for (let _celula = 0; _celula < AREA; _celula++) {
-    const x = _celula % COLUNAS,
-        y = Math.floor(_celula / COLUNAS)
 
-    if (grade[_celula].paredes[0]) {
-        desenharLinha(x * LADO, y * LADO, x * LADO + LADO, y * LADO)
-    }
-    if (grade[_celula].paredes[1]) {
-        desenharLinha(x * LADO + LADO, y * LADO, x * LADO + LADO, y * LADO + LADO)
-    }
-    if (grade[_celula].paredes[2]) {
-        desenharLinha(x * LADO + LADO, y * LADO + LADO, x * LADO, y * LADO + LADO)
-    }
-    if (grade[_celula].paredes[3]) {
-        desenharLinha(x * LADO, y * LADO + LADO, x * LADO, y * LADO)
-    }
+for (let cell = 0; cell < TOTAL; cell++) {
+    const x = (cell % COLUMNS) * SIZE,
+        y = Math.floor(cell / COLUMNS) * SIZE,
+        { walls } = grid[cell]
+
+    if (walls[0]) drawLine(x, y, x + SIZE, y)
+    if (walls[1]) drawLine(x + SIZE, y, x + SIZE, y + SIZE)
+    if (walls[2]) drawLine(x + SIZE, y + SIZE, x, y + SIZE)
+    if (walls[3]) drawLine(x, y + SIZE, x, y)
 }
