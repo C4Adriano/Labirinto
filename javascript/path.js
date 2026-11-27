@@ -1,134 +1,138 @@
-import { COLUMNS, ctx, grid, ROWS, SIZE, TOTAL } from "./lab.js"
+import { AREA, BLOCK_SIZE, COLUMNS, ctx, grid } from "./lab.js"
 
 /**
  * @returns {[number, number]}
  */
 function ask() {
-    const LIMIT = ROWS * COLUMNS
     while (true) {
-        const [s, g] = [
-            Number(prompt(`Início\n(Obs.: Deve ser um número inteiro, maior ou igual a zero, menor que o limite (${LIMIT}) e diferente do fim; ou seja: 0 ≤ i < ${LIMIT} / i ≠ f)`) ?? ""),
-            Number(prompt(`Fim\n(Obs.: Deve ser um número inteiro, maior ou igual a zero, menor que o limite (${LIMIT}) e diferente do início; ou seja: 0 ≤ f < ${LIMIT} / f ≠ i)`) ?? ""),
+        const [s, f] = [
+            parseInt(prompt(`Início\n(Obs.: Deve ser um número inteiro, maior ou igual a zero, menor que o limite (${AREA}) e diferente do fim; ou seja: 0 ≤ i < ${AREA} / i ≠ f)`) ?? ""),
+            parseInt(prompt(`Fim\n(Obs.: Deve ser um número inteiro, maior ou igual a zero, menor que o limite (${AREA}) e diferente do início; ou seja: 0 ≤ f < ${AREA} / f ≠ i)`) ?? ""),
         ]
 
-        if (s >= 0 && s < LIMIT && g >= 0 && g < LIMIT && s !== g) return [s, g]
+        if (s >= 0 && s < AREA && f >= 0 && f < AREA && s !== f) return [s, f]
     }
 }
 
-const [START, GOAL] = ask(),
-    PATH_COLOR = "red",
-    MARKER_SIZE = 6,
-    /** @type {number[]} */ distances = new Array(TOTAL).fill(Infinity),
-    /** @type {boolean[]} */ visited = new Array(TOTAL).fill(false),
-    /** @type {number[]} */ previous = new Array(TOTAL).fill(-1)
+const [START, FINAL] = ask(),
+    color = "red",
+    pointSize = 6,
+    /** @type {number[]} */ distances = new Array(AREA).fill(Infinity),
+    /** @type {boolean[]} */ visited = new Array(AREA).fill(false),
+    /** @type {number[]} */ previous = new Array(AREA).fill(-1)
 
 distances[START] = 0
 
 /**
- * @param {number} index
+ * Pegar os lados
+ * @param {number} i
  * @returns {number[]}
  */
-function getNeighbors(index) {
-    const { walls } = grid[index],
-        /** @type {number[]} */ neighbors = []
+function getSided(i) {
+    const { block } = grid[i],
+        /** @type {number[]} */ sided = []
 
-    if (!walls[0] && index >= COLUMNS) neighbors.push(index - COLUMNS)
-    if (!walls[1] && (index + 1) % COLUMNS !== 0) neighbors.push(index + 1)
-    if (!walls[2] && index < TOTAL - COLUMNS) neighbors.push(index + COLUMNS)
-    if (!walls[3] && index % COLUMNS !== 0) neighbors.push(index - 1)
+    if (!block[0] && i >= COLUMNS) sided.push(i - COLUMNS) // n
+    if (!block[1] && (i + 1) % COLUMNS !== 0) sided.push(i + 1) // l
+    if (!block[2] && i < AREA - COLUMNS) sided.push(i + COLUMNS) // s
+    if (!block[3] && i % COLUMNS !== 0) sided.push(i - 1) // o
 
-    return neighbors
+    return sided
 }
 
 /**
- * @returns {number}
+ * Retorna o vértice de menor distância
+ * @returns {number} Vértice
  */
-function findNearest() {
+function getNearest() {
     let nearest = Infinity,
-        found = -1
+        current = -1
 
-    for (let index = 0; index < TOTAL; index++)
-        if (!visited[index] && distances[index] < nearest) {
-            nearest = distances[index]
-            found = index
+    for (let i = 0; i < AREA; i++)
+        if (!visited[i] && distances[i] < nearest) {
+            nearest = distances[i]
+            current = i
         }
 
-    return found
+    return current
 }
 
+/**
+ * Setup do caminho e algoritmo de DIJKSTRA
+ */
 function explore() {
     while (true) {
-        const current = findNearest()
+        const current = getNearest() // pegar o vértice de menor distância em relação ao start
 
-        if (current === -1 || current === GOAL) return
+        if (current === -1 || current === FINAL) return // para de rodar aqui
 
         visited[current] = true
 
-        for (const neighbor of getNeighbors(current)) {
-            if (visited[neighbor]) continue
+        for (const target of getSided(current)) {
+            if (visited[target]) continue // ignorar caso já tenha passado por ali
 
-            const distance = distances[current] + 1
+            const distance = distances[current] + 1 // adicionar 1 de distância pro próximo bloco
 
-            if (distance < distances[neighbor]) {
-                distances[neighbor] = distance
-                previous[neighbor] = current
+            if (distance < distances[target]) {
+                // verifica se a distância do alvo é menor que a já definida
+                distances[target] = distance // definir a distância
+                previous[target] = current // adiciona o bloco no caminho
             }
         }
     }
 }
 
 /**
+ * Forma o caminho
  * @returns {number[]}
  */
-function reconstructPath() {
+function makePath() {
     const /** @type {number[]} */ path = []
 
-    let current = GOAL
+    let current = FINAL // começa pelo final e vai até o início
 
     while (current !== -1) {
         path.unshift(current)
         current = previous[current]
     }
 
-    if (path[0] !== START) return []
+    if (path[0] !== START) return [] // se não achar o caminho ( se o início do caminho não for a posição inicial )
 
     return path
 }
 
 /**
- * @param {number} index
+ * @param {number} block
  * @returns {{ x: number, y: number }}
  */
-function getCellCenter(index) {
-    return { x: (index % COLUMNS) * SIZE + SIZE / 2, y: Math.floor(index / COLUMNS) * SIZE + SIZE / 2 }
+function getCenter(block) {
+    return { x: (block % COLUMNS) * BLOCK_SIZE + BLOCK_SIZE / 2, y: Math.floor(block / COLUMNS) * BLOCK_SIZE + BLOCK_SIZE / 2 }
 }
 
 /**
  * @param {number[]} path
  */
 function drawPath(path) {
-    if (path.length === 0) return
+    if (path.length === 0) return // não desenha nada se o caminho for vazio
 
     ctx.beginPath()
-    ctx.strokeStyle = PATH_COLOR
+    ctx.strokeStyle = color
     ctx.lineWidth = 2
-    ctx.lineCap = "round"
-    ctx.lineJoin = "round"
 
-    for (let index = 0; index < path.length; index++) {
-        const { x: _x, y: _y } = getCellCenter(path[index])
+    for (let i = 0; i < path.length; i++) {
+        const { x: _x, y: _y } = getCenter(path[i]) // pega o centro dos bloco
 
-        index === 0 ? ctx.moveTo(_x, _y) : ctx.lineTo(_x, _y)
+        i === 0 ? ctx.moveTo(_x, _y) : ctx.lineTo(_x, _y) // 1ª vez = moveTo; 2ª+ = lineTo
     }
 
-    ctx.stroke()
+    ctx.stroke() // pintar
 
-    const { x, y } = getCellCenter(START),
-        markerOffset = MARKER_SIZE / 2
+    const { x, y } = getCenter(START), // meio do bloco
+        offset = pointSize / 2 // centralizar o □ do início
 
-    ctx.fillStyle = PATH_COLOR
-    ctx.fillRect(x - markerOffset, y - markerOffset, MARKER_SIZE, MARKER_SIZE)
+    ctx.fillStyle = color // cor
+    ctx.fillRect(x - offset, y - offset, pointSize, pointSize) // preencher o □
 }
 
-explore()
-drawPath(reconstructPath())
+explore() // preparar todo o caminho
+drawPath(makePath()) // desenhar o caminho se ele existir

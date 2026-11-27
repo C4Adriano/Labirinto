@@ -1,12 +1,12 @@
-/** @typedef {{ visited: boolean, walls: boolean[], id: number }} Cell */
+/** @typedef {{ visited: boolean, block: boolean[], id: number }} Cell */
 
 export const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById("canvas")),
     ctx = /** @type {CanvasRenderingContext2D} */ (canvas.getContext("2d")),
     ROWS = 20,
     COLUMNS = 20,
-    SIZE = 20,
-    EXTRA_PERCENT = 0.05,
-    TOTAL = ROWS * COLUMNS,
+    BLOCK_SIZE = 20,
+    EXTRA_PERCENT = 0.0,
+    AREA = ROWS * COLUMNS,
     /** @type {number[][]} */ OFFSETS = [
         [0, -1],
         [1, 0],
@@ -14,7 +14,7 @@ export const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById(
         [-1, 0],
     ],
     /** @type {Cell[]} */ grid = []
-for (let id = 0; id < TOTAL; id++) grid.push({ visited: false, walls: [true, true, true, true], id })
+for (let id = 0; id < AREA; id++) grid.push({ visited: false, block: [true, true, true, true], id })
 
 /**
  * @param {number} cell
@@ -37,7 +37,7 @@ let current = 0,
 
 grid[current].visited = true
 
-while (visitedCount < TOTAL) {
+while (visitedCount < AREA) {
     /** @type {number[]} */
     const options = []
 
@@ -52,8 +52,8 @@ while (visitedCount < TOTAL) {
         const direction = options[Math.floor(Math.random() * options.length)],
             neighbor = neighborOf(current, direction)
 
-        grid[current].walls[direction] = false
-        grid[neighbor].walls[(direction + 2) % 4] = false
+        grid[current].block[direction] = false
+        grid[neighbor].block[(direction + 2) % 4] = false
 
         current = neighbor
 
@@ -62,14 +62,14 @@ while (visitedCount < TOTAL) {
     } else current = /** @type {number} */ (stack.pop())
 }
 
-for (let left = Math.round(EXTRA_PERCENT * TOTAL); left > 0; left--) {
-    const cell = Math.floor(Math.random() * TOTAL),
+for (let left = Math.round(EXTRA_PERCENT * AREA); left > 0; left--) {
+    const cell = Math.floor(Math.random() * AREA),
         direction = Math.floor(Math.random() * 4),
         neighbor = neighborOf(cell, direction)
 
     if (neighbor !== -1) {
-        grid[cell].walls[direction] = false
-        grid[neighbor].walls[(direction + 2) % 4] = false
+        grid[cell].block[direction] = true
+        grid[neighbor].block[(direction + 2) % 4] = true
     }
 }
 
@@ -78,7 +78,6 @@ for (let left = Math.round(EXTRA_PERCENT * TOTAL); left > 0; left--) {
  * @param {number} y1
  * @param {number} x2
  * @param {number} y2
- * @returns {void}
  */
 function drawLine(x1, y1, x2, y2) {
     ctx.beginPath()
@@ -90,13 +89,13 @@ function drawLine(x1, y1, x2, y2) {
 ctx.clearRect(0, 0, canvas.width, canvas.height)
 ctx.strokeStyle = "black"
 
-for (let cell = 0; cell < TOTAL; cell++) {
-    const x = (cell % COLUMNS) * SIZE,
-        y = Math.floor(cell / COLUMNS) * SIZE,
-        { walls } = grid[cell]
+for (let cell = 0; cell < AREA; cell++) {
+    const x = (cell % COLUMNS) * BLOCK_SIZE,
+        y = Math.floor(cell / COLUMNS) * BLOCK_SIZE,
+        { block: walls } = grid[cell]
 
-    if (walls[0]) drawLine(x, y, x + SIZE, y)
-    if (walls[1]) drawLine(x + SIZE, y, x + SIZE, y + SIZE)
-    if (walls[2]) drawLine(x + SIZE, y + SIZE, x, y + SIZE)
-    if (walls[3]) drawLine(x, y + SIZE, x, y)
+    if (walls[0]) drawLine(x, y, x + BLOCK_SIZE, y)
+    if (walls[1]) drawLine(x + BLOCK_SIZE, y, x + BLOCK_SIZE, y + BLOCK_SIZE)
+    if (walls[2]) drawLine(x + BLOCK_SIZE, y + BLOCK_SIZE, x, y + BLOCK_SIZE)
+    if (walls[3]) drawLine(x, y + BLOCK_SIZE, x, y)
 }
